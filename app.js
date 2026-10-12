@@ -121,6 +121,7 @@
     DATA.transactions = parsed.transactions || [];
     DATA.error = parsed.error || null;
     DATA.mapNote = parsed.mapNote || '';
+    DATA.skipNote = parsed.skipNote || '';
     DATA.source = source;
     DATA.banner = fixtureNote();
     DATA.bannerKind = parsed.error && parsed.error.code !== 'empty' ? 'err' : 'info';
@@ -236,6 +237,7 @@
     if (!box) return;
     const parts = [];
     if (DATA.banner) parts.push(DATA.banner);
+    if (DATA.skipNote) parts.push(DATA.skipNote);
     if (DATA.mapNote) parts.push(DATA.mapNote);
     if (!parts.length) { box.hidden = true; box.innerHTML = ''; return; }
     box.hidden = false;

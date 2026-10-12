@@ -28,6 +28,10 @@
     noDate: '날짜를 읽은 거래가 없어요. 년도, 월, 날짜 열을 확인해 주세요.'
   };
 
+  function skippedMessage(n) {
+    return '날짜를 읽지 못한 ' + n + '행은 건너뛰었습니다.';
+  }
+
   function staleMessage(hhmm) {
     const when = hhmm ? hhmm + '에 저장해 둔' : '이전에 저장해 둔';
     return '시트를 지금 불러오지 못했어요. ' + when + ' 내용을 보여 드리고 있어요.';
@@ -103,6 +107,19 @@
           cols[key] = idx;
           used.add(idx);
           break;
+        }
+      }
+      /* 제목이 년도 칸에 붙는 경우. 예: ‘치치와 코코의 가계부 년도’ */
+      if (key === 'year' && cols.year < 0) {
+        const h = header || [];
+        for (let i = 0; i < h.length; i++) {
+          if (used.has(i)) continue;
+          const k = headerKey(h[i]);
+          if (k.endsWith('년도') || k.endsWith('연도')) {
+            cols.year = i;
+            used.add(i);
+            break;
+          }
         }
       }
     });
@@ -194,14 +211,31 @@
     return n >= 1 && n <= 31 ? n : 0;
   }
 
-  function composeYmd(yearCell, monthCell, dayCell) {
+  /* 7/1, 9/30, 7월 1일. 연도는 없다. */
+  function parseMonthDay(v) {
+    const t = String(v == null ? '' : v).trim();
+    if (!t) return null;
+    let m = /^(\d{1,2})\s*[\/.\-]\s*(\d{1,2})$/.exec(t);
+    if (!m) m = /^(\d{1,2})\s*월\s*(\d{1,2})\s*일?$/.exec(t);
+    if (!m) return null;
+    const month = Number(m[1]);
+    const day = Number(m[2]);
+    if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+    return { month: month, day: day };
+  }
+
+  function composeYmd(yearCell, monthCell, dayCell, hasDayCol) {
     const full = parseFullDate(dayCell) || parseFullDate(yearCell);
     if (full) return full;
-    const y = parseYear(yearCell) || parseYear(dayCell);
+    const y = parseYear(yearCell) || parseYear(dayCell) || parseYear(monthCell);
+    /* 날짜 칸의 월/일이 월 칸보다 우선이다. 둘이 달라도 날짜 칸을 쓴다. */
+    const md = parseMonthDay(dayCell);
+    if (y && md) return ymd(y, md.month, md.day);
     const m = parseMonth(monthCell);
-    const d = parseDayNumber(dayCell) || 1;
-    if (!y || !m) return '';
-    return ymd(y, m, d);
+    const d = parseDayNumber(dayCell);
+    if (y && m && d) return ymd(y, m, d);
+    if (y && m && !hasDayCol) return ymd(y, m, 1);
+    return '';
   }
 
   function isBlankCategory(v) {
@@ -224,10 +258,11 @@
     return false;
   }
 
+  /* 사용금액이 음수면 수입. 양수여도 급여·이자 같은 분류는 수입. */
   function kindOf(content, category, amount) {
     if (isCarry(content, category)) return 'carry';
-    if (isIncomeCategory(category)) return amount < 0 ? 'refund' : 'income';
-    if (amount < 0) return 'refund';
+    if (amount < 0) return 'income';
+    if (isIncomeCategory(category)) return 'income';
     return 'expense';
   }
 
@@ -257,9 +292,14 @@
       const carry = isCarry(content, categoryRaw);
       if (!carry && amount == null) continue;
       if (!carry && !content) continue;
-      const date = composeYmd(cell(row, cols.year), cell(row, cols.month), cell(row, cols.day));
+      const date = composeYmd(
+        cell(row, cols.year),
+        cell(row, cols.month),
+        cell(row, cols.day),
+        cols.day >= 0
+      );
       if (!date) {
-        if (content || carry) undated += 1;
+        if (content || carry || amount != null) undated += 1;
         continue;
       }
       const signed = amount == null ? 0 : amount;
@@ -280,9 +320,17 @@
     if (!transactions.length) {
       const err = new Error(undated ? MESSAGES.noDate : MESSAGES.empty);
       err.code = undated ? 'no-date' : 'empty';
-      return { transactions: [], error: err, headerRow: found.index, cols: cols };
+      err.skipped = undated;
+      return { transactions: [], error: err, headerRow: found.index, cols: cols, skipped: undated, skipNote: '' };
     }
-    return { transactions: transactions, error: null, headerRow: found.index, cols: cols };
+    return {
+      transactions: transactions,
+      error: null,
+      headerRow: found.index,
+      cols: cols,
+      skipped: undated,
+      skipNote: undated ? skippedMessage(undated) : ''
+    };
   }
 
   function parseCategoryRows(rows) {
@@ -346,7 +394,9 @@
         error: parsed.error,
         mapNote: '',
         headerRow: parsed.headerRow,
-        cols: parsed.cols
+        cols: parsed.cols,
+        skipped: parsed.skipped || 0,
+        skipNote: ''
       };
     }
     let entries = [];
@@ -361,7 +411,9 @@
       error: null,
       mapNote: mapNote,
       headerRow: parsed.headerRow,
-      cols: parsed.cols
+      cols: parsed.cols,
+      skipped: parsed.skipped || 0,
+      skipNote: parsed.skipNote || ''
     };
   }
 
@@ -418,7 +470,7 @@
     (transactions || []).forEach(function (tx) {
       if (!inRange(tx, from, to) || tx.kind === 'carry') return;
       if (tx.kind === 'income') {
-        income += tx.amount;
+        income += Math.abs(tx.amount);
         countIn += 1;
         return;
       }
@@ -449,7 +501,7 @@
     (transactions || []).forEach(function (tx) {
       if (tx.kind !== 'income' || !inRange(tx, from, to)) return;
       const name = tx.category || '미분류';
-      map[name] = (map[name] || 0) + tx.amount;
+      map[name] = (map[name] || 0) + Math.abs(tx.amount);
     });
     return Object.keys(map).map(function (name) {
       return { name: name, amount: map[name] };
@@ -677,6 +729,7 @@
     LARGE_WON: LARGE_WON,
     MESSAGES: MESSAGES,
     staleMessage: staleMessage,
+    skippedMessage: skippedMessage,
     headerKey: headerKey,
     won: won,
     escHtml: escHtml,
