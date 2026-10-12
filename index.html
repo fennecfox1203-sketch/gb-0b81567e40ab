@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="부부 가계부">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#efe6d6">
+<meta name="robots" content="noindex,nofollow">
+<title>진호님 부부 가계부</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-180.png" sizes="180x180">
+<link rel="icon" href="icon-512.png" sizes="512x512">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="inner top-row">
+      <div>
+        <p class="eyebrow">가계부</p>
+        <h1>진호님 부부</h1>
+      </div>
+      <div class="top-actions">
+        <p class="sync" id="syncStatus"></p>
+        <button type="button" class="text-btn" id="syncBtn">새로고침</button>
+      </div>
+    </div>
+  </header>
+  <div class="inner">
+    <div id="banner" class="banner" hidden></div>
+    <div id="period"></div>
+    <main id="main"></main>
+  </div>
+</div>
+<nav class="tabbar" aria-label="가계부 메뉴">
+  <div class="tabbar-inner">
+    <button type="button" data-action="tab" data-tab="summary" class="on">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M4 9.5h16M8 3.5v4M16 3.5v4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <span>요약</span>
+    </button>
+    <button type="button" data-action="tab" data-tab="category">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 4.5v7.5h7.2" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+      <span>분류</span>
+    </button>
+    <button type="button" data-action="tab" data-tab="tx">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M5 12h14M5 17h9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <span>내역</span>
+    </button>
+    <button type="button" data-action="tab" data-tab="trend">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 16l5-5 3.5 3.5L20 7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 19h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <span>추이</span>
+    </button>
+    <button type="button" data-action="tab" data-tab="watch">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5l1.6 4.2 4.5.3-3.5 2.9 1.1 4.4L12 14.2 8.3 16.3l1.1-4.4-3.5-2.9 4.5-.3z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+      <span>주목</span>
+    </button>
+  </div>
+</nav>
+<script src="ledger.js"></script>
+<script src="charts.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
